@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { authMiddleware } from '@/middleware/auth';
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  req: NextRequest,
+  context: { params: { id: string } } // fix typing
+) {
   const user = authMiddleware(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    const { id } = params;
+    const { id } = context.params;
 
     const { error } = await supabase
       .from('transactions')
