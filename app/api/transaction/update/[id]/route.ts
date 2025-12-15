@@ -1,31 +1,54 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
-import { authMiddleware } from '@/middleware/auth';
-import { Transaction } from '@/models/transaction';
+import { NextRequest, NextResponse } from "next/server";
+import { supabase } from "@/lib/supabase";
+import { authMiddleware } from "@/middleware/auth";
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const user = authMiddleware(req);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   try {
-    const { amount, type, category, note, date } = await req.json();
-    const { id } = params;
+    // 👇 REQUIRED in Next 16
+    const { id } = await params;
+
+    const {
+      amount,
+      type,
+      category,
+      note,
+      date,
+    }: {
+      amount?: number;
+      type?: "income" | "expense";
+      category?: string;
+      note?: string;
+      date?: string;
+    } = await req.json();
 
     const { data, error } = await supabase
-      .from('transactions')
+      .from("transactions")
       .update({ amount, type, category, note, date })
-      .eq('id', id)
-      .eq('user_id', user.id)
-      .select('*')
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .select()
       .single();
 
-    const transaction = data as Transaction | null;
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
 
-    if (error || !transaction) return NextResponse.json({ error: error?.message || 'Failed to update transaction' }, { status: 400 });
-
-    return NextResponse.json({ transaction });
+    return NextResponse.json({ transaction: data });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Internal Server Error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      {
+        error:
+          err instanceof Error ? err.message : "Internal Server Error",
+      },
+      { status: 500 }
+    );
   }
 }
