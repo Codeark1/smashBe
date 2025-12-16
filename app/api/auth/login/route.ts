@@ -7,16 +7,22 @@ import { User } from '@/models/user';
 export async function POST(req: NextRequest) {
   try {
     const { email, password } = await req.json();
+    if (!email || !password) {
+      return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
 
     const { data, error } = await supabase
       .from('users')
       .select('id, email, password, verified, created_at, updated_at')
-      .eq('email', email)
+      .eq('email', normalizedEmail)
       .single();
 
     const user = data as User | null;
 
-    if (error || !user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    // Supabase returns null data if user not found
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
     if (!user.verified) return NextResponse.json({ error: 'Email not verified' }, { status: 403 });
 
     const isValid = await bcrypt.compare(password, user.password);
