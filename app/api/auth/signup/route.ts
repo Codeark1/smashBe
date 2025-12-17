@@ -3,55 +3,92 @@ import { supabase } from '@/lib/supabase';
 import bcrypt from 'bcrypt';
 import { generateOtp } from '@/utils/generateOtp';
 import { sendEmail } from '@/utils/sendEmail';
-import { User } from '@/models/user';
+import { SafeUser } from '@/models/user';
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, password } = await req.json();
+    const { name, email, password } = await req.json();
 
-    // 1️⃣ Check if user already exists
-    const { data: existing } = await supabase
+    // 1️⃣ Validate input
+    if (!name || !email || !password) {
+      return NextResponse.json(
+        { error: 'Name, email, and password are required' },
+        { status: 400 }
+      );
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // 2️⃣ Check if user already exists
+    const { data: existingUser } = await supabase
       .from('users')
       .select('id')
-      .eq('email', email)
+      .eq('email', normalizedEmail)
       .single();
 
-    if (existing) return NextResponse.json({ error: 'Email already registered' }, { status: 400 });
+    if (existingUser) {
+      return NextResponse.json(
+        { error: 'Email already registered' },
+        { status: 400 }
+      );
+    }
 
-    // 2️⃣ Hash password
+    // 3️⃣ Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 3️⃣ Insert user
+    // 4️⃣ Create user
     const { data, error } = await supabase
       .from('users')
-      .insert([{ email, password: hashedPassword, verified: false }])
-      .select('id, email, verified, created_at')
+      .insert([
+        {
+          name,
+          email: normalizedEmail,
+          password: hashedPassword,
+          verified: false,
+        },
+      ])
+      .select('id, name, email, verified, created_at')
       .single();
 
-    if (error || !data) return NextResponse.json({ error: error?.message || 'Failed to create user' }, { status: 400 });
+    if (error || !data) {
+      return NextResponse.json(
+        { error: error?.message || 'Failed to create user' },
+        { status: 400 }
+      );
+    }
 
-    const user = data as User;
+    const user = data as SafeUser;
 
-    // 4️⃣ Generate OTP
-    const otp = generateOtp(); // ✅ Declare otp first
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    // 5️⃣ Generate OTP
+    const otp = generateOtp();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
 
-    // 5️⃣ Store OTP in DB
-    await supabase.from('email_otps').insert([{ user_id: user.id, otp, expires_at: expiresAt }]);
+    // 6️⃣ Save OTP
+    await supabase.from('email_otps').insert([
+      {
+        user_id: user.id,
+        otp,
+        expires_at: expiresAt,
+      },
+    ]);
 
-    // 6️⃣ Send OTP email
+    // 7️⃣ Send email
     await sendEmail(
-      email,
+      normalizedEmail,
       'Verify Your Email',
       `Your OTP is ${otp}. It expires in 5 minutes.`,
       `<p>Your OTP is <strong>${otp}</strong>. It expires in 5 minutes.</p>`
     );
 
-    // 7️⃣ Return safe user (remove password)
-    const { password: _, ...safeUser } = user;
-    return NextResponse.json({ message: 'User created. OTP sent.', user: safeUser });
+    // 8️⃣ Return safe user
+    return NextResponse.json({
+      message: 'User created successfully. OTP sent.',
+      user,
+    });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Internal Server Error';
+    const message =
+      err instanceof Error ? err.message : 'Internal Server Error';
+
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
