@@ -1,94 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import bcrypt from 'bcrypt';
-import { generateOtp } from '@/utils/generateOtp';
-import { sendEmail } from '@/utils/sendEmail';
 import { SafeUser } from '@/models/user';
+import { signToken } from '@/lib/jwt';
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, email, password } = await req.json();
+    const { email, password } = await req.json();
 
-    // 1️⃣ Validate input
-    if (!name || !email || !password) {
+    // Validate input
+    if (!email || !password) {
       return NextResponse.json(
-        { error: 'Name, email, and password are required' },
+        { error: 'Email and password are required' },
         { status: 400 }
       );
     }
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    // 2️⃣ Check if user already exists
-    const { data: existingUser } = await supabase
+    // Find user
+    const { data: userData, error } = await supabase
       .from('users')
-      .select('id')
+      .select('id, name, email, password, verified, created_at')
       .eq('email', normalizedEmail)
       .single();
 
-    if (existingUser) {
-      return NextResponse.json(
-        { error: 'Email already registered' },
-        { status: 400 }
-      );
+    if (error || !userData) {
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    // 3️⃣ Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = userData as SafeUser & { password: string };
 
-    // 4️⃣ Create user
-    const { data, error } = await supabase
-      .from('users')
-      .insert([
-        {
-          name,
-          email: normalizedEmail,
-          password: hashedPassword,
-          verified: false,
-        },
-      ])
-      .select('id, name, email, verified, created_at')
-      .single();
-
-    if (error || !data) {
-      return NextResponse.json(
-        { error: error?.message || 'Failed to create user' },
-        { status: 400 }
-      );
+    // Check password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    const user = data as SafeUser;
+    // Optionally generate JWT
+    const token = signToken({ id: user.id });
 
-    // 5️⃣ Generate OTP
-    const otp = generateOtp();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
+    // Return safe user (exclude password)
+    const { password: _pw, ...safeUser } = user;
 
-    // 6️⃣ Save OTP
-    await supabase.from('email_otps').insert([
-      {
-        user_id: user.id,
-        otp,
-        expires_at: expiresAt,
-      },
-    ]);
-
-    // 7️⃣ Send email
-    await sendEmail(
-      normalizedEmail,
-      'Verify Your Email',
-      `Your OTP is ${otp}. It expires in 5 minutes.`,
-      `<p>Your OTP is <strong>${otp}</strong>. It expires in 5 minutes.</p>`
-    );
-
-    // 8️⃣ Return safe user
-    return NextResponse.json({
-      message: 'User created successfully. OTP sent.',
-      user,
-    });
+    return NextResponse.json({ message: 'Login successful', user: safeUser, token });
   } catch (err: unknown) {
-    const message =
-      err instanceof Error ? err.message : 'Internal Server Error';
-
+    const message = err instanceof Error ? err.message : 'Internal Server Error';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
