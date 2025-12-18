@@ -2,19 +2,28 @@ import { NextRequest } from "next/server";
 import { authMiddleware } from "@/middleware/auth";
 import { transactionController } from "@/controllers/transactionController";
 
-/* ------------------------- GET /api/transaction ------------------------- */
+/* -------------------------------------------------------------------------- */
+/*                              GET /api/transaction                           */
+/* -------------------------------------------------------------------------- */
 export async function GET(req: NextRequest) {
   const user = authMiddleware(req);
-  if (!user) return new Response("Unauthorized", { status: 401 });
+
+  if (!user) {
+    return new Response("Unauthorized", { status: 401 });
+  }
 
   return transactionController.list(user.id);
 }
 
-/* ------------------------- POST /api/transaction ------------------------- */
+/* -------------------------------------------------------------------------- */
+/*                              POST /api/transaction                          */
+/* -------------------------------------------------------------------------- */
 export async function POST(req: NextRequest) {
   const user = authMiddleware(req);
-  if (!user) return new Response("Unauthorized", { status: 401 });
 
-  const body = await req.json();
-  return transactionController.create(body, user.id);
+  if (!user) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  return transactionController.create(req, user.id);
 }
