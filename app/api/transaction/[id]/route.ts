@@ -5,10 +5,14 @@ import { transactionController } from "@/controllers/transactionController";
 /* ------------------------- PATCH /api/transaction/[id] ------------------------- */
 export async function PATCH(
   req: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> },
 ) {
   const user = authMiddleware(req);
-  if (!user) return new Response("Unauthorized", { status: 401 });
+  if (!user)
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
 
   const { id } = await context.params;
   return transactionController.update(req, user.id, id);
@@ -17,10 +21,14 @@ export async function PATCH(
 /* ------------------------- DELETE /api/transaction/[id] ------------------------- */
 export async function DELETE(
   req: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> },
 ) {
   const user = authMiddleware(req);
-  if (!user) return new Response("Unauthorized", { status: 401 });
+  if (!user)
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
 
   const { id } = await context.params;
   return transactionController.delete(user.id, id);
