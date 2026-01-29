@@ -4,13 +4,15 @@ import { supabase } from "@/lib/supabase";
 import bcrypt from "bcrypt";
 
 export async function POST(req: NextRequest) {
+  console.log("🔐 RESET PASSWORD ROUTE HIT - POST /api/auth/resetpassword");
   try {
     const { otp, newPassword } = await req.json();
+    console.log("🔑 Password reset attempt with OTP:", otp);
 
     if (!otp || !newPassword) {
       return NextResponse.json(
         { error: "OTP and new password are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -40,7 +42,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ message: "Password reset successfully" });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Internal Server Error";
+    const message =
+      err instanceof Error ? err.message : "Internal Server Error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

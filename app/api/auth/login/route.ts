@@ -5,8 +5,10 @@ import { SafeUser } from "@/models/user";
 import { signToken } from "@/lib/jwt";
 
 export async function POST(req: NextRequest) {
+  console.log("🔐 LOGIN ROUTE HIT - POST /api/auth/login");
   try {
     const { email, password } = await req.json();
+    console.log("📧 Login attempt for email:", email);
 
     if (!email || !password) {
       return NextResponse.json(

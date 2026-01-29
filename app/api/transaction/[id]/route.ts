@@ -7,7 +7,9 @@ export async function PATCH(
   req: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
+  console.log("✏️ TRANSACTION UPDATE ROUTE HIT - PATCH /api/transaction/[id]");
   const user = authMiddleware(req);
+  console.log("👤 User authenticated:", user ? `ID: ${user.id}` : "FAILED");
   if (!user)
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
@@ -23,7 +25,9 @@ export async function DELETE(
   req: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
+  console.log("🗑️ TRANSACTION DELETE ROUTE HIT - DELETE /api/transaction/[id]");
   const user = authMiddleware(req);
+  console.log("👤 User authenticated:", user ? `ID: ${user.id}` : "FAILED");
   if (!user)
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,

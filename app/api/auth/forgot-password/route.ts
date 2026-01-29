@@ -5,8 +5,10 @@ import { generateOtp } from "@/utils/generateOtp";
 import { sendEmail } from "@/utils/sendEmail";
 
 export async function POST(req: NextRequest) {
+  console.log("🔑 FORGOT PASSWORD ROUTE HIT - POST /api/auth/forgot-password");
   try {
     const { email } = await req.json();
+    console.log("📧 Password reset requested for email:", email);
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
@@ -19,26 +21,31 @@ export async function POST(req: NextRequest) {
 
     if (!user) {
       // Do not reveal that user doesn't exist
-      return NextResponse.json({ message: "If this email exists, an OTP has been sent." });
+      return NextResponse.json({
+        message: "If this email exists, an OTP has been sent.",
+      });
     }
 
-    const otp = generateOtp(); 
+    const otp = generateOtp();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-    await supabase.from("email_otps").insert([
-      { user_id: user.id, otp, expires_at: expiresAt },
-    ]);
+    await supabase
+      .from("email_otps")
+      .insert([{ user_id: user.id, otp, expires_at: expiresAt }]);
 
     await sendEmail(
       email,
       "Reset Your Password",
       `Your OTP is ${otp}. It expires in 5 minutes.`,
-      `<p>Your OTP is <strong>${otp}</strong>. It expires in 5 minutes.</p>`
+      `<p>Your OTP is <strong>${otp}</strong>. It expires in 5 minutes.</p>`,
     );
 
-    return NextResponse.json({ message: "If this email exists, an OTP has been sent." });
+    return NextResponse.json({
+      message: "If this email exists, an OTP has been sent.",
+    });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Internal Server Error";
+    const message =
+      err instanceof Error ? err.message : "Internal Server Error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
