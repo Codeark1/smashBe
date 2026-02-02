@@ -1,12 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
-export async function GET(req: NextRequest) {
-
-
+export async function GET() {
   // Fetch all transactions (optionally filter by user)
   const { data, error } = await supabase
-    .from("transaction")
+    .from("transactions")
     .select("amount, type");
 
   if (error) {
