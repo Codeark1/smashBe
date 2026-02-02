@@ -25,7 +25,10 @@ export async function POST(req: NextRequest) {
       .eq("email", normalizedEmail)
       .single();
 
+    console.log("🔍 Database query result:", { userData: userData ? "USER_FOUND" : "NO_USER", error: error ? error.message : "NO_ERROR" });
+
     if (error || !userData) {
+      console.log("❌ Login failed: User not found in database");
       return NextResponse.json(
         { error: "Invalid credentials" },
         { status: 401 },
@@ -33,19 +36,26 @@ export async function POST(req: NextRequest) {
     }
 
     const user = userData as SafeUser & { password: string };
+    console.log("👤 User found:", { id: user.id, email: user.email, verified: user.verified });
 
     const isMatch = await bcrypt.compare(password, user.password);
+    console.log("🔐 Password match result:", isMatch);
+    
     if (!isMatch) {
+      console.log("❌ Login failed: Password does not match");
       return NextResponse.json(
         { error: "Invalid credentials" },
         { status: 401 },
       );
     }
 
+    console.log("✅ Password verified, creating JWT token...");
     const token = signToken({ id: user.id, email: user.email });
+    console.log("🎟️ JWT token created successfully");
 
     const { password: _pw, ...safeUser } = user;
 
+    console.log("✅ Login successful for user:", user.email);
     return NextResponse.json({
       message: "Login successful",
       user: safeUser,
