@@ -3,10 +3,10 @@ import { deleteBudgetAsync } from "../../../../services/budgetService";
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  context: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { id } = params;
+    const { id } = await context.params;
     if (!id) throw new Error("id is required");
     await deleteBudgetAsync(id);
     return NextResponse.json({ success: true });
