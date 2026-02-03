@@ -4,6 +4,7 @@ import {
   getBudgetsAsync,
 } from "../../../services/budgetService";
 
+export async function POST(req: NextRequest) {
   try {
     const data = await req.json();
     const budget = await createOrUpdateBudgetAsync(data);
@@ -13,6 +14,7 @@ import {
   }
 }
 
+export async function PUT(req: NextRequest) {
   try {
     const data = await req.json();
     const budget = await createOrUpdateBudgetAsync(data);
@@ -22,6 +24,7 @@ import {
   }
 }
 
+export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get("userId");

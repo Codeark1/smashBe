@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { deleteBudgetAsync } from "../../../../services/budgetService";
 
+export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } },
 ) {
