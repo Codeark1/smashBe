@@ -57,3 +57,4 @@ export const getBudgetProgressAsync = async (
   // TODO: Calculate spent per category using transactions table
   return budgets?.map((b) => ({ ...b, spent: 0 })) ?? [];
 };
+// Removed all budget service code
